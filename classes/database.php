@@ -87,4 +87,60 @@ dsn: 'mysql:host=localhost;
         }
     }
 
+    function addBooks($title, $isbn, $publication_year, $edition, $publisher){
+        $con = $this->opencon();
+
+        try{
+            $con->beginTransaction();
+            $stmt = $con->prepare('INSERT INTO Books (book_title, book_isbn, book_publication_year, book_edition, book_publisher) VALUES(?,?,?,?,?)');
+            $stmt->execute([$title, $isbn, $publication_year, $edition, $publisher]);
+            $book_id = $con->lastInsertId();
+            $con->commit();
+            return $book_id;
+        }catch(PDOException $e){
+            if($con->inTransaction()){
+                $con->rollBack();
+            }
+            throw $e;
+        }
+    }
+
+    function viewBooks(){
+        $con = $this->opencon();
+        return $con->query('SELECT * from Books')->fetchAll();
+    }
+
+    function addCopy($book_id, $status){
+        $con = $this->opencon();
+
+        $book_id = (int)$book_id;
+
+        try{
+            $con->beginTransaction();
+
+            $range_start = $book_id * 100;
+            $range_end = $range_start + 99;
+
+            $stmt = $con->prepare('SELECT COALESCE(MAX(copy_id), 0) FROM Bookcopy WHERE copy_id BETWEEN ? AND ? FOR UPDATE');
+            $stmt->execute([$range_start, $range_end]);
+            $max_copy_id = (int)$stmt->fetchColumn();
+
+            $copy_id = ($max_copy_id > 0) ? $max_copy_id + 1 : $range_start + 1;
+
+            if($copy_id > $range_end){
+                throw new RuntimeException('This format supports up to 99 copies per book.');
+            }
+
+            $stmt = $con->prepare('INSERT INTO Bookcopy (copy_id, book_id, bc_status) VALUES(?,?,?)');
+            $stmt->execute([$copy_id, $book_id, $status]);
+
+            $con->commit();
+            return $copy_id;
+        }catch(Throwable $e){
+            if($con->inTransaction()){
+                $con->rollBack();
+            }
+            throw $e;
+        }
+    }
 }

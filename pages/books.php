@@ -1,12 +1,62 @@
+<?php
+  require_once('../classes/database.php');
+  $con = new database();
+
+  $allbooks = $con->viewBooks();
+
+  $addBookStatus = null;
+  $addBookMessage = '';
+
+  if(isset($_POST['add_book'])) {
+    $title = $_POST['book_title'];
+    $isbn = $_POST['book_isbn'] ?: null;
+    $year = $_POST['book_publication_year'] ?: null;
+    $edition = $_POST['book_edition'] ?: null;
+    $publisher = $_POST['book_publisher'] ?: null;
+
+    try {
+      $book_id = $con->addBooks($title, $isbn, $year, $edition, $publisher);
+
+      $addBookStatus = 'success';
+      $addBookMessage = 'Book added successfully.';
+
+    }catch (Exception $e) {
+      $addBookStatus = 'error';
+      $addBookMessage = 'Error adding book.';
+    }
+  }
+
+  $bookcopyStatus = null;
+  $bookcopyMessage = '';
+
+  if(isset($_POST['add_copy'])) {
+    $book_id = $_POST['book_id'];
+    $status = $_POST['c_status'];
+
+    try {
+      $copy_id = $con->addCopy($book_id, $status);
+
+      $bookcopyStatus = 'success';
+      $bookcopyMessage = 'Book copy added successfully.';
+    }catch (Exception $e) {
+      $bookcopyStatus = 'error';
+      $bookcopyMessage = 'Error adding book copy: ' . $e->getMessage();
+    }
+  }
+?>
+
 <!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Books — Admin</title>
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css">
+  <!-- <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"> -->
   <link rel="stylesheet" href="../assets/css/style.css">
+
   <link rel="stylesheet" href="../bootstrap/css/bootstrap.css">
+  <link rel="stylesheet" href="../sweetalert/dist/sweetalert2.css">
+
 </head>
 <body>
 <nav class="navbar navbar-expand-lg bg-white border-bottom sticky-top">
@@ -19,7 +69,7 @@
       <ul class="navbar-nav me-auto gap-lg-1">
         <li class="nav-item"><a class="nav-link" href="admin-dashboard.html">Dashboard</a></li>
         <li class="nav-item"><a class="nav-link active" href="books.html">Books</a></li>
-        <li class="nav-item"><a class="nav-link" href="borrowers.html">Borrowers</a></li>
+        <li class="nav-item"><a class="nav-link" href="borrowers.php">Borrowers</a></li>
         <li class="nav-item"><a class="nav-link" href="checkout.html">Checkout</a></li>
         <li class="nav-item"><a class="nav-link" href="return.html">Return</a></li>
         <li class="nav-item"><a class="nav-link" href="catalog.html">Catalog</a></li>
@@ -61,7 +111,7 @@
             <label class="form-label">Publisher</label>
             <input class="form-control" name="book_publisher" placeholder="optional">
           </div>
-          <button class="btn btn-primary w-100" type="submit">Save Book</button>
+          <button name="add_book" class="btn btn-primary w-100" type="submit">Save Book</button>
         </form>
       </div>
 
@@ -73,17 +123,16 @@
           <div class="mb-3">
             <label class="form-label">Book</label>
             <select class="form-select" name="book_id" required>
-              <option value="">Select book</option>
-              <option value="1">Noli Me Tangere</option>
-              <option value="2">El Filibusterismo</option>
-              <option value="3">Mga Ibong Mandaragit</option>
-              <option value="4">Smaller and Smaller Circles</option>
-              <option value="5">Dekada ’70</option>
+              <?php
+              foreach($allbooks as $book) {
+                echo '<option value="' . $book['book_id'] . '">' . $book['book_title'] . '</option>';
+              }
+              ?>
             </select>
           </div>
           <div class="mb-3">
             <label class="form-label">Status</label>
-            <select class="form-select" name="status" required>
+            <select class="form-select" name="c_status" required>
               <option value="AVAILABLE">AVAILABLE</option>
               <option value="ON_LOAN">ON_LOAN</option>
               <option value="LOST">LOST</option>
@@ -91,7 +140,7 @@
               <option value="REPAIR">REPAIR</option>
             </select>
           </div>
-          <button class="btn btn-outline-primary w-100" type="submit">Add Copy</button>
+          <button name="add_copy" class="btn btn-outline-primary w-100" type="submit">Add Copy</button>
         </form>
       </div>
     </div>
@@ -250,6 +299,48 @@
   </div>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<!-- <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script> -->
+
+<script src="../bootstrap/js/bootstrap.bundle.min.js"></script>
+<script src="../sweetalert//dist/sweetalert2.js"></script>
+
+<script>
+  const addBookStatus = <?php echo json_encode($addBookStatus); ?>;
+  const addBookMessage = <?php echo json_encode($addBookMessage); ?>;
+
+  if(addBookStatus == 'success') {
+    Swal.fire({
+      icon: 'success',
+      title: 'Success',
+      text: addBookMessage,
+    });
+  } else if(addBookStatus == 'error') {
+    Swal.fire({
+      icon: 'error',
+      title: 'Error',
+      text: addBookMessage,
+    });
+  }
+</script>
+
+<script>
+  const bookcopyStatus = <?php echo json_encode($bookcopyStatus); ?>;
+  const bookcopyMessage = <?php echo json_encode($bookcopyMessage); ?>;
+
+  if(bookcopyStatus == 'success') {
+    Swal.fire({
+      icon: 'success',
+      title: 'Success',
+      text: bookcopyMessage,
+    });
+  } else if(bookcopyStatus == 'error') {
+    Swal.fire({
+      icon: 'error',
+      title: 'Error',
+      text: bookcopyMessage,
+    });
+  }
+
+</script>
 </body>
 </html>
