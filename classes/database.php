@@ -143,4 +143,48 @@ dsn: 'mysql:host=localhost;
             throw $e;
         }
     }
+
+    function viewAuthors(){
+        $con = $this->opencon();
+        return $con->query('SELECT * from Authors')->fetchAll();
+    }
+
+    function addBookAuthor($book_id, $author_id){
+        $con = $this->opencon();
+
+        try{
+            $con->beginTransaction();
+            $stmt = $con->prepare('INSERT INTO BookAuthors (book_id, author_id) VALUES(?,?)');
+            $stmt->execute([$book_id,$author_id]);
+            $con->commit();
+            return true;
+        }catch(PDOException $e){
+            if($con->inTransaction()){
+                $con->rollBack();
+            }
+            throw $e;
+        }    
+    }
+
+    function viewGenres(){
+        $con = $this->opencon();
+        return $con->query('SELECT * from Genres')->fetchAll();
+    }
+
+    function addGenre($genre_id, $book_id){
+        $con = $this->opencon();
+
+        try{
+            $con->beginTransaction();
+            $stmt = $con->prepare('INSERT INTO Bookgenre (genre_id, book_id) VALUES(?,?)');
+            $stmt->execute([$genre_id, $book_id]);
+            $con->commit();
+            return true;
+        }catch(PDOException $e){
+            if($con->inTransaction()){
+                $con->rollBack();
+            }
+            throw $e;
+        }    
+    }
 }

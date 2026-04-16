@@ -3,6 +3,8 @@
   $con = new database();
 
   $allbooks = $con->viewBooks();
+  $allauthors = $con->viewAuthors();
+  $allgenres = $con->viewGenres();
 
   $addBookStatus = null;
   $addBookMessage = '';
@@ -40,9 +42,46 @@
       $bookcopyMessage = 'Book copy added successfully.';
     }catch (Exception $e) {
       $bookcopyStatus = 'error';
-      $bookcopyMessage = 'Error adding book copy: ' . $e->getMessage();
+      $bookcopyMessage = 'Error adding book copy.';
     }
   }
+
+  $bookauthorStatus = null;
+  $bookauthorMessage = '';
+
+  if(isset($_POST['addAuthor'])) {
+    $book_id = $_POST['book_id'];
+    $author_id = $_POST['author_id'];
+
+    try {
+      $con->addBookAuthor($book_id, $author_id);
+
+      $bookauthorStatus = 'success';
+      $bookauthorMessage = 'Author assigned to book successfully.';
+    }catch (Exception $e) {
+      $bookauthorStatus = 'error';
+      $bookauthorMessage = 'Error assigning author to book.';
+    }
+  }
+
+  $bookgenreStatus = null;
+  $bookgenreMessage = '';
+
+  if(isset($_POST['addGenre'])) {
+    $book_id = $_POST['book_id'];
+    $genre_id = $_POST['genre_id'];
+
+    try {
+      $con->addGenre($genre_id, $book_id);
+
+      $bookgenreStatus = 'success';
+      $bookgenreMessage = 'Genre assigned to book successfully.';
+    }catch (Exception $e) {
+      $bookgenreStatus = 'error';
+      $bookgenreMessage = 'Error assigning genre to book.';
+    }
+  }
+
 ?>
 
 <!doctype html>
@@ -68,7 +107,7 @@
     <div id="navBooks" class="collapse navbar-collapse">
       <ul class="navbar-nav me-auto gap-lg-1">
         <li class="nav-item"><a class="nav-link" href="admin-dashboard.html">Dashboard</a></li>
-        <li class="nav-item"><a class="nav-link active" href="books.html">Books</a></li>
+        <li class="nav-item"><a class="nav-link active" href="books.php]">Books</a></li>
         <li class="nav-item"><a class="nav-link" href="borrowers.php">Borrowers</a></li>
         <li class="nav-item"><a class="nav-link" href="checkout.html">Checkout</a></li>
         <li class="nav-item"><a class="nav-link" href="return.html">Return</a></li>
@@ -123,6 +162,7 @@
           <div class="mb-3">
             <label class="form-label">Book</label>
             <select class="form-select" name="book_id" required>
+              <option value="">Select book</option>
               <?php
               foreach($allbooks as $book) {
                 echo '<option value="' . $book['book_id'] . '">' . $book['book_title'] . '</option>';
@@ -133,6 +173,7 @@
           <div class="mb-3">
             <label class="form-label">Status</label>
             <select class="form-select" name="c_status" required>
+              <option value="">Set Status</option>
               <option value="AVAILABLE">AVAILABLE</option>
               <option value="ON_LOAN">ON_LOAN</option>
               <option value="LOST">LOST</option>
@@ -215,20 +256,25 @@
                 <div class="col-12 col-md-6">
                   <select class="form-select" name="book_id" required>
                     <option value="">Select book</option>
-                    <option value="1">Noli Me Tangere</option>
-                    <option value="2">El Filibusterismo</option>
+                    <?php
+                    foreach($allbooks as $book) {
+                      echo '<option value="' . $book['book_id'] . '">' . $book['book_title'] . '</option>';
+                    }
+                    ?>
                   </select>
                 </div>
                 <div class="col-12 col-md-6">
                   <select class="form-select" name="author_id" required>
-                    <option value="">Select author</option>
-                    <option value="1">Jose Rizal</option>
-                    <option value="2">Amado Hernandez</option>
-                    <option value="3">F. H. Batacan</option>
+                    <option value="">Select Author</option>
+                    <?php
+                    foreach($allauthors as $author) {
+                      echo '<option value="' . $author['author_id'] . '">' . $author['author_firstname'] . ' ' . $author['author_lastname'] . '</option>';
+                    }
+                    ?>
                   </select>
                 </div>
                 <div class="col-12">
-                  <button class="btn btn-outline-primary w-100" type="submit">Assign</button>
+                  <button name="addAuthor" class="btn btn-outline-primary w-100" type="submit">Assign</button>
                 </div>
               </form>
               <div class="small-muted mt-2">Unique constraint prevents duplicate (book_id, author_id).</div>
@@ -244,19 +290,25 @@
                 <div class="col-12 col-md-6">
                   <select class="form-select" name="book_id" required>
                     <option value="">Select book</option>
-                    <option value="1">Noli Me Tangere</option>
-                    <option value="2">El Filibusterismo</option>
+                    <?php
+                    foreach($allbooks as $book) {
+                      echo '<option value="' . $book['book_id'] . '">' . $book['book_title'] . '</option>';
+                    }
+                    ?>
                   </select>
                 </div>
                 <div class="col-12 col-md-6">
                   <select class="form-select" name="genre_id" required>
                     <option value="">Select genre</option>
-                    <option value="1">Classic</option>
-                    <option value="5">Philippine Literature</option>
+                    <?php
+                    foreach($allgenres as $genre) {
+                      echo '<option value="' . $genre['genre_id'] . '">' . $genre['genre_name'] . '</option>';
+                    }
+                    ?>
                   </select>
                 </div>
                 <div class="col-12">
-                  <button class="btn btn-outline-primary w-100" type="submit">Assign</button>
+                  <button name="addGenre" class="btn btn-outline-primary w-100" type="submit">Assign</button>
                 </div>
               </form>
               <div class="small-muted mt-2">Unique constraint prevents duplicate (genre_id, book_id).</div>
@@ -340,6 +392,45 @@
       text: bookcopyMessage,
     });
   }
+</script>
+
+<script>
+  const bookauthorStatus = <?php echo json_encode($bookauthorStatus); ?>;
+  const bookauthorMessage = <?php echo json_encode($bookauthorMessage); ?>;
+    
+  if(bookauthorStatus == 'success') {
+    Swal.fire({
+      icon: 'success',
+      title: 'Success',
+      text: bookauthorMessage,
+    });
+  } else if(bookauthorStatus == 'error') {
+    Swal.fire({
+      icon: 'error',
+      title: 'Error',
+      text: bookauthorMessage,
+    });
+  }
+</script>
+  
+<script>
+  const bookgenreStatus = <?php echo json_encode($bookgenreStatus); ?>;
+  const bookgenreMessage = <?php echo json_encode($bookgenreMessage); ?>;
+
+  if(bookgenreStatus == 'success') {
+    Swal.fire({
+      icon: 'success',
+      title: 'Success',
+      text: bookgenreMessage,
+    });
+  } else if(bookgenreStatus == 'error') {
+    Swal.fire({
+      icon: 'error',
+      title: 'Error',
+      text: bookgenreMessage,
+    });
+  } 
+</script>
 
 </script>
 </body>
