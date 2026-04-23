@@ -82,6 +82,27 @@
     }
   }
 
+  $editBookStatus = null;
+  $editBookMessage = '';
+
+  if(isset($_POST['edit_book'])) {
+    $book_id = $_POST['edit_book_id'];
+    $title = $_POST['edit_book_title'];
+    $isbn = $_POST['edit_book_isbn'] ?: null;
+    $year = $_POST['edit_book_publication_year'] ?: null;
+    $publisher = $_POST['edit_book_publisher'] ?: null;
+
+    try {
+      $con->updateBook($book_id, $title, $isbn, $year, $publisher);
+
+      $editBookStatus = 'success';
+      $editBookMessage = 'Book updated successfully.';
+    }catch (Exception $e) {
+      $editBookStatus = 'error';
+      $editBookMessage = 'Error updating book.';
+    }
+  }
+
 ?>
 
 <!doctype html>
@@ -100,14 +121,14 @@
 <body>
 <nav class="navbar navbar-expand-lg bg-white border-bottom sticky-top">
   <div class="container">
-    <a class="navbar-brand fw-semibold" href="admin-dashboard.html">Library Admin</a>
+    <a class="navbar-brand fw-semibold" href="admin-dashboard.php">Library Admin</a>
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navBooks">
       <span class="navbar-toggler-icon"></span>
     </button>
     <div id="navBooks" class="collapse navbar-collapse">
       <ul class="navbar-nav me-auto gap-lg-1">
-        <li class="nav-item"><a class="nav-link" href="admin-dashboard.html">Dashboard</a></li>
-        <li class="nav-item"><a class="nav-link active" href="books.php]">Books</a></li>
+        <li class="nav-item"><a class="nav-link" href="admin-dashboard.php">Dashboard</a></li>
+        <li class="nav-item"><a class="nav-link active" href="books.php">Books</a></li>
         <li class="nav-item"><a class="nav-link" href="borrowers.php">Borrowers</a></li>
         <li class="nav-item"><a class="nav-link" href="checkout.html">Checkout</a></li>
         <li class="nav-item"><a class="nav-link" href="return.html">Return</a></li>
@@ -191,7 +212,7 @@
         <div class="d-flex flex-wrap gap-2 justify-content-between align-items-end mb-3">
           <div>
             <h5 class="mb-1">Books List</h5>
-            <div class="small-muted">Placeholder rows. Replace with PHP + MySQL output.</div>
+            <div class="small-muted">NOT Placeholder rows. DO NOT Replace with PHP + MySQL output.</div>
           </div>
           <div class="d-flex gap-2">
             <input class="form-control" style="max-width: 260px;" placeholder="Search title / ISBN...">
@@ -214,32 +235,33 @@
               </tr>
             </thead>
             <tbody>
-              <tr>
-                <td>1</td>
-                <td>Noli Me Tangere</td>
-                <td>9789710810736</td>
-                <td>1887</td>
-                <td>National Book Store</td>
-                <td>3</td>
-                <td><span class="badge text-bg-success">2</span></td>
-                <td class="text-end">
-                  <button class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#editBookModal">Edit</button>
-                  <button class="btn btn-sm btn-outline-danger">Delete</button>
-                </td>
-              </tr>
-              <tr>
-                <td>4</td>
-                <td>Smaller and Smaller Circles</td>
-                <td>9789712721768</td>
-                <td>2002</td>
-                <td>Ateneo de Manila University Press</td>
-                <td>2</td>
-                <td><span class="badge text-bg-warning">1</span></td>
-                <td class="text-end">
-                  <button class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#editBookModal">Edit</button>
-                  <button class="btn btn-sm btn-outline-danger">Delete</button>
-                </td>
-              </tr>
+              <?php
+              $viewcopies = $con->viewCopies();
+              foreach($viewcopies as $vc){
+              echo'<tr>';
+              echo'<td>'.$vc['book_id'].'</td>';
+              echo'<td>'.$vc['book_title'].'</td>';
+              echo'<td>'.$vc['book_isbn'].'</td>';
+              echo'<td>'.$vc['book_publication_year'].'</td>';
+              echo'<td>'.$vc['book_publisher'].'</td>';
+              echo'<td class="text-center">'.$vc['Copies'].'</td>';
+              echo'<td class="text-center"><span class="badge text-bg-success">'.$vc['Available_Copies'].'</span></td>';
+              echo'<td class="text-end">';
+              echo'<div class="btn-group" role="group">';
+
+              echo'<button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#editBookModal"
+
+                data-book-id="'.$vc['book_id'] . '" 
+                data-book-title="'. $vc['book_title'] . '" 
+                data-book-isbn="'. $vc['book_isbn'] . '" 
+                data-book-publication-year="'. $vc['book_publication_year'] . '" 
+                data-book-publisher="' . $vc['book_publisher'] . '" >Edit</button>';
+                
+              echo'<button class="btn btn-sm text-bg-danger">Delete</button>';
+              echo'</td>';
+              echo'</tr>';
+              }
+              ?>
             </tbody>
           </table>
         </div>
@@ -321,7 +343,7 @@
   </div>
 </main>
 
-<!-- Edit Book Modal (UI only) -->
+<!-- Edit Book Modal (NOT UI only) -->
 <div class="modal fade" id="editBookModal" tabindex="-1" aria-hidden="true">
   <div class="modal-dialog">
     <div class="modal-content">
@@ -332,19 +354,24 @@
       <div class="modal-body">
         <!-- Later in PHP: load existing values -->
         <form action="#" method="POST">
+          <input type="hidden" id="edit_book_id" name="edit_book_id">
           <div class="mb-3">
             <label class="form-label">Title</label>
-            <input class="form-control" value="Noli Me Tangere">
+            <input class="form-control" id="edit_book_title" name="edit_book_title" required>
           </div>
           <div class="mb-3">
             <label class="form-label">ISBN</label>
-            <input class="form-control" value="9789710810736">
+            <input class="form-control" id="edit_book_isbn" name="edit_book_isbn">
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Publication Year</label>
+            <input class="form-control" id="edit_book_publication_year" name="edit_book_publication_year" type="number" min="1500" max="2100">
           </div>
           <div class="mb-3">
             <label class="form-label">Publisher</label>
-            <input class="form-control" value="National Book Store">
+            <input class="form-control" id="edit_book_publisher" name="edit_book_publisher">
           </div>
-          <button class="btn btn-primary w-100" type="button">Save Changes</button>
+          <button class="btn btn-primary w-100" name="edit_book" type="submit">Save Changes</button>
         </form>
       </div>
     </div>
@@ -354,7 +381,7 @@
 <!-- <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script> -->
 
 <script src="../bootstrap/js/bootstrap.bundle.min.js"></script>
-<script src="../sweetalert//dist/sweetalert2.js"></script>
+<script src="../sweetalert/dist/sweetalert2.js"></script>
 
 <script>
   const addBookStatus = <?php echo json_encode($addBookStatus); ?>;
@@ -432,6 +459,44 @@
   } 
 </script>
 
+<script>
+  const editBookStatus = <?php echo json_encode($editBookStatus); ?>;
+  const editBookMessage = <?php echo json_encode($editBookMessage); ?>;
+
+  if(editBookStatus == 'success') {
+    Swal.fire({
+      icon: 'success',
+      title: 'Success',
+      text: editBookMessage,
+    });
+  } else if(editBookStatus == 'error') {
+    Swal.fire({
+      icon: 'error',
+      title: 'Error',
+      text: editBookMessage,
+    });
+  }
 </script>
+
+<script>
+  const editBookModal = document.getElementById('editBookModal');
+
+  if(editBookModal) {
+    editBookModal.addEventListener('show.bs.modal', function(event) {
+      const button = event.relatedTarget;
+
+      if(!button) {
+        return;
+      }
+
+      document.getElementById('edit_book_id').value = button.getAttribute('data-book-id') || '';
+      document.getElementById('edit_book_title').value = button.getAttribute('data-book-title') || '';
+      document.getElementById('edit_book_isbn').value = button.getAttribute('data-book-isbn') || '';
+      document.getElementById('edit_book_publication_year').value = button.getAttribute('data-book-publication-year') || '';
+      document.getElementById('edit_book_publisher').value = button.getAttribute('data-book-publisher') || '';
+    });
+  }
+</script>
+
 </body>
 </html>

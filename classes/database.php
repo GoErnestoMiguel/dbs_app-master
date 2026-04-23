@@ -128,7 +128,7 @@ dsn: 'mysql:host=localhost;
             $copy_id = ($max_copy_id > 0) ? $max_copy_id + 1 : $range_start + 1;
 
             if($copy_id > $range_end){
-                throw new RuntimeException('This format supports up to 99 copies per book.');
+                throw new RuntimeException('Cannot add more than 99 books.');
             }
 
             $stmt = $con->prepare('INSERT INTO Bookcopy (copy_id, book_id, bc_status) VALUES(?,?,?)');
@@ -187,4 +187,98 @@ dsn: 'mysql:host=localhost;
             throw $e;
         }    
     }
+
+    function viewCopies(){
+        $con = $this->opencon();
+        return $con->query("SELECT
+        books.book_id,
+        books.book_title,
+        books.book_isbn,
+        books.book_publication_year,
+        books.book_publisher,
+        COUNT(bookcopy.copy_id) AS Copies,
+        SUM(bookcopy.bc_status = 'Available') AS Available_Copies
+        FROM
+        books
+        LEFT JOIN bookcopy ON bookcopy.book_id = books.book_id
+        GROUP BY 1")->fetchAll();
+    }
+
+    function viewUsers(){
+        $con = $this->opencon();
+        return $con->query("SELECT
+        borrowers.borrower_id,
+        CONCAT(borrowers.borrower_firstname, ' ', borrowers.borrower_lastname) AS fullname,
+        borrowers.borrower_email,
+        CASE
+        WHEN borrowers.is_active = '1' THEN 'YES'
+        ELSE 'NO'
+        END AS b_ia,
+        CASE
+        WHEN users.is_active = '1' THEN 'YES'
+        ELSE 'NO'
+        END AS u_ia
+        FROM borrowers
+        JOIN borroweruser ON borroweruser.borrower_id = borrowers.borrower_id
+        JOIN users ON users.user_id = borroweruser.user_id
+    ")->fetchAll();
+    }
+
+    function viewDashboardOverview(){
+        $con = $this->opencon();
+        return $con->query("SELECT
+            (SELECT COUNT(*) FROM books) AS total_books,
+            (SELECT COUNT(*) FROM bookcopy) AS total_copies,
+            (SELECT COUNT(*) FROM loan WHERE loan_status = 'OPEN') AS open_loans,
+            (SELECT COUNT(*)
+             FROM loanitem
+             WHERE li_returned_at IS NULL
+               AND li_duedate IS NOT NULL
+               AND li_duedate < CURDATE()) AS overdue_items
+        ")->fetch();
+    }
+
+    function viewRecentLoans($limit = 5){
+        $con = $this->opencon();
+        $limit = (int)$limit;
+
+        $stmt = $con->prepare("SELECT
+            loan.loan_id,
+            CONCAT(borrowers.borrower_firstname, ' ', borrowers.borrower_lastname) AS fullname,
+            loan.loan_status,
+            loan.loan_date,
+            users.username AS processed_by
+        FROM loan
+        JOIN borrowers ON borrowers.borrower_id = loan.borrower_id
+        JOIN users ON users.user_id = loan.processed_by_user_id
+        ORDER BY loan.loan_date DESC, loan.loan_id DESC
+        LIMIT {$limit}");
+        $stmt->execute();
+
+        return $stmt->fetchAll();
+    }
+
+    function updateBook($book_id, $title, $isbn, $year, $publisher)
+{
+    $con = $this->opencon();
+    try {
+        $con->beginTransaction();
+            $stmt = $con->prepare(
+                'UPDATE Books 
+                SET 
+                    book_title = ?, 
+                    book_isbn = ?, 
+                    book_publication_year = ?, 
+                    book_publisher = ? 
+                WHERE book_id = ?');
+            $stmt->execute([$title, $isbn, $year, $publisher, $book_id]);
+        $con->commit();
+        return true;
+    } catch (PDOException $e) {
+        if ($con->inTransaction()) {
+            $con->rollBack();
+        }
+        throw $e;
+    }
+}
 }
