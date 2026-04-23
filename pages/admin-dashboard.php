@@ -49,7 +49,7 @@ $overdueItems = (int)($overview['overdue_items'] ?? 0);
 				<li class="nav-item"><a class="nav-link" href="return.html">Return</a></li>
 				<li class="nav-item"><a class="nav-link" href="catalog.html">Catalog</a></li>
 			</ul>
-			<div class="d-flex align-items-center gap-2">sssssssssssssssssssssss
+			<div class="d-flex align-items-center gap-2">
 				<span class="badge badge-soft">Role: ADMIN</span>
 				<a class="btn btn-sm btn-outline-secondary" href="login.html">Logout</a>
 			</div>
