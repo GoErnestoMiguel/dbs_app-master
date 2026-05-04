@@ -281,4 +281,60 @@ dsn: 'mysql:host=localhost;
         throw $e;
     }
 }
+
+    function addAuthor($firstname, $lastname, $birth, $nationality)
+    {
+        $con = $this->opencon();
+
+        try {
+            $con->beginTransaction();
+
+            $stmt = $con->prepare('INSERT INTO authors (author_firstname, author_lastname, author_birthyear, author_nationality) VALUES (?, ?, ?, ?)');
+            $stmt->execute([$firstname, $lastname, $birth, $nationality]);
+
+            $con->commit();
+            return true;
+        } catch (PDOException $e) {
+            if ($con->inTransaction()) {
+                $con->rollBack();
+            }
+            throw $e;
+        }
+    }
+
+    function addGenres($genre_name)
+    {
+        $con = $this->opencon();
+
+        try {
+            $con->beginTransaction();
+
+            $stmt = $con->prepare('INSERT INTO genres (genre_name) VALUES (?)');
+            $stmt->execute([$genre_name]);
+
+            $con->commit();
+            return true;
+        } catch (PDOException $e) {
+            if ($con->inTransaction()) {
+                $con->rollBack();
+            }
+            throw $e;
+        }
+    }
+
+    function getAuthors()
+    {
+        $con = $this->opencon();
+        $stmt = $con->prepare('SELECT * FROM authors');
+        $stmt->execute();
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    function getGenres()
+    {
+        $con = $this->opencon();
+        $stmt = $con->prepare('SELECT * FROM genres');
+        $stmt->execute();
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
 }
