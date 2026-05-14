@@ -1,5 +1,7 @@
 <?php
   require_once('../classes/database.php');
+  session_start();
+
   $con = new database();
 
   $allbooks = $con->viewBooks();
@@ -8,6 +10,21 @@
 
   $addBookStatus = null;
   $addBookMessage = '';
+
+  if(isset($_POST['delete_books'])){
+    $book_id = $_POST['book_id'];
+    $book_title = $_POST['book_title'];
+
+    try{
+      $con->deletebooks($book_id);
+      $_SESSION['success_message'] = $book_title . ' has been deleted in the database.';
+      header('Location: books.php');
+      exit();
+
+    }catch(Exception $e){
+      $error_message = "Cannot delete this book. It may have active loans or copies in use";
+    }
+  }
 
   if(isset($_POST['add_book'])) {
     $title = $_POST['book_title'];
@@ -128,7 +145,7 @@
     <div id="navBooks" class="collapse navbar-collapse">
       <ul class="navbar-nav me-auto gap-lg-1">
         <li class="nav-item"><a class="nav-link" href="admin-dashboard.php">Dashboard</a></li>
-        <li class="nav-item"><a class="nav-link active" href="books.php">Books</a></li>
+        <li class="nav-item"><a class="nav-link" href="books.php">Books</a></li>
         <li class="nav-item"><a class="nav-link" href="authors-genres.php">Authors &amp; Genres</a></li>
         <li class="nav-item"><a class="nav-link" href="borrowers.php">Borrowers</a></li>
         <li class="nav-item"><a class="nav-link" href="checkout.html">Checkout</a></li>
@@ -144,6 +161,27 @@
 </nav>
 
 <main class="container py-4">
+
+<?php if(isset($error_message)){ ?>
+<div class="alert alert-danger alert-dismissible fade show" role="alert">
+  <strong>Error! </strong> <?php echo $error_message; ?>
+  <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close">
+
+  </button>
+</div>
+<?php } ?>
+
+<?php if(isset($_SESSION['success_message'])){ ?>
+<div class="alert alert-success alert-dismissible fade show" role="alert">
+  <strong>Success! </strong> <?php echo $_SESSION['success_message']; ?>
+  <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close">
+
+  </button>
+</div>
+<?php 
+  unset($_SESSION['success_message']);
+} ?>
+
   <div class="row g-3">
     <div class="col-12 col-lg-4">
       <div class="card p-4">
@@ -258,7 +296,12 @@
                 data-book-publication-year="'. $vc['book_publication_year'] . '" 
                 data-book-publisher="' . $vc['book_publisher'] . '" >Edit</button>';
                 
-              echo'<button class="btn btn-sm text-bg-danger">Delete</button>';
+              echo'<button type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#deleteBookModal"
+              
+              data-book-id="' . $vc['book_id'] . '"
+              data-book-title="' . $vc['book_title'] . '"
+
+              >Delete</button>';
               echo'</td>';
               echo'</tr>';
               }
@@ -379,10 +422,37 @@
   </div>
 </div>
 
+<!-- Delete Book Modal (NOT UI only) -->
+<div class="modal fade" id="deleteBookModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Edit Book</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <p>Are you sure you want to delete <strong id="delete_book_title"></strong>?</p>
+        <p class="text-danger small">This action cannot be undone.</p>
+        
+        <form action="#" method="POST">
+          <input type="hidden" name="book_id" id="delete_book_id">
+          <input type="hidden" name="book_title" id="delete_book_titles">
+          <div class="d-flex gap-2 justify-content-end">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+            <button type="submit" class="btn btn-danger" name="delete_books">Delete</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script> -->
 
 <script src="../bootstrap/js/bootstrap.bundle.min.js"></script>
 <script src="../sweetalert/dist/sweetalert2.js"></script>
+
+
 
 <script>
   const addBookStatus = <?php echo json_encode($addBookStatus); ?>;
@@ -401,9 +471,7 @@
       text: addBookMessage,
     });
   }
-</script>
 
-<script>
   const bookcopyStatus = <?php echo json_encode($bookcopyStatus); ?>;
   const bookcopyMessage = <?php echo json_encode($bookcopyMessage); ?>;
 
@@ -420,9 +488,7 @@
       text: bookcopyMessage,
     });
   }
-</script>
 
-<script>
   const bookauthorStatus = <?php echo json_encode($bookauthorStatus); ?>;
   const bookauthorMessage = <?php echo json_encode($bookauthorMessage); ?>;
     
@@ -439,9 +505,7 @@
       text: bookauthorMessage,
     });
   }
-</script>
-  
-<script>
+
   const bookgenreStatus = <?php echo json_encode($bookgenreStatus); ?>;
   const bookgenreMessage = <?php echo json_encode($bookgenreMessage); ?>;
 
@@ -458,9 +522,7 @@
       text: bookgenreMessage,
     });
   } 
-</script>
 
-<script>
   const editBookStatus = <?php echo json_encode($editBookStatus); ?>;
   const editBookMessage = <?php echo json_encode($editBookMessage); ?>;
 
@@ -477,9 +539,7 @@
       text: editBookMessage,
     });
   }
-</script>
 
-<script>
   const editBookModal = document.getElementById('editBookModal');
 
   if(editBookModal) {
@@ -497,6 +557,22 @@
       document.getElementById('edit_book_publisher').value = button.getAttribute('data-book-publisher') || '';
     });
   }
+
+  const deleteBookModal = document.getElementById('deleteBookModal');
+  deleteBookModal.addEventListener('show.bs.modal', function(event){
+
+    const btn = event.relatedTarget;
+    if(!btn){ 
+      return;
+    }
+
+    document.getElementById('delete_book_id').value = btn.getAttribute('data-book-id') || '';
+    document.getElementById('delete_book_titles').value = btn.getAttribute('data-book-title') || '';
+    
+    document.getElementById('delete_book_title').textContent = btn.getAttribute('data-book-title') || '';
+
+  });
+
 </script>
 
 </body>

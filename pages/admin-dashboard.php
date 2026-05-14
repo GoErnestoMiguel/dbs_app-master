@@ -2,7 +2,7 @@
 require_once('../classes/database.php');
 $con = new database();
 
-$overview = [
+$overview= [
 	'total_books' => 0,
 	'total_copies' => 0,
 	'open_loans' => 0,
@@ -19,7 +19,7 @@ try {
 
 $totalBooks = (int)($overview['total_books'] ?? 0);
 $totalCopies = (int)($overview['total_copies'] ?? 0);
-$openLoans = (int)($overview['open_loans'] ?? 0);
+$openLoans = (int)($overview['open_loans'] ?? 0); 
 $overdueItems = (int)($overview['overdue_items'] ?? 0);
 ?>
 

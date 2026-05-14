@@ -231,10 +231,10 @@ dsn: 'mysql:host=localhost;
             (SELECT COUNT(*) FROM bookcopy) AS total_copies,
             (SELECT COUNT(*) FROM loan WHERE loan_status = 'OPEN') AS open_loans,
             (SELECT COUNT(*)
-             FROM loanitem
-             WHERE li_returned_at IS NULL
-               AND li_duedate IS NOT NULL
-               AND li_duedate < CURDATE()) AS overdue_items
+            FROM loanitem
+            WHERE li_returned_at IS NULL
+                AND li_duedate IS NOT NULL
+                AND li_duedate < CURDATE()) AS overdue_items
         ")->fetch();
     }
 
@@ -302,6 +302,26 @@ dsn: 'mysql:host=localhost;
         }
     }
 
+    function updateAuthor($author_id, $firstname, $lastname, $birth, $nationality)
+    {
+        $con = $this->opencon();
+
+        try {
+            $con->beginTransaction();
+
+            $stmt = $con->prepare('UPDATE authors SET author_firstname = ?, author_lastname = ?, author_birthyear = ?, author_nationality = ? WHERE author_id = ?');
+            $stmt->execute([$firstname, $lastname, $birth, $nationality, $author_id]);
+
+            $con->commit();
+            return true;
+        } catch (PDOException $e) {
+            if ($con->inTransaction()) {
+                $con->rollBack();
+            }
+            throw $e;
+        }
+    }
+
     function addGenres($genre_name)
     {
         $con = $this->opencon();
@@ -336,5 +356,74 @@ dsn: 'mysql:host=localhost;
         $stmt = $con->prepare('SELECT * FROM genres');
         $stmt->execute();
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    function deletebooks($book_id){
+        $con = $this->opencon();
+        try {
+            $con->beginTransaction();
+
+            $stmtCopies = $con->prepare('DELETE FROM BookCopy WHERE book_id = ?');
+            $stmtCopies->execute([$book_id]);
+
+            $stmtGenre = $con->prepare('DELETE FROM BookGenre WHERE book_id = ?');
+            $stmtGenre->execute([$book_id]);
+
+            $stmtBA = $con->prepare('DELETE FROM BookAuthors WHERE book_id = ?');
+            $stmtBA->execute([$book_id]);
+
+            $stmtBook = $con->prepare('DELETE FROM Books WHERE book_id = ?');
+            $stmtBook->execute([$book_id]);
+
+            $con->commit();
+            return true;
+        }catch (PDOException $e) {
+            if ($con->inTransaction()) {
+                $con->rollBack();
+            }
+            throw $e;
+        }
+    }
+
+    function deleteAuthor($author_id){
+        $con = $this->opencon();
+        try {
+            $con->beginTransaction();
+
+            $stmtAuthor = $con->prepare('DELETE FROM authors WHERE author_id = ?');
+            $stmtAuthor->execute([$author_id]);
+
+            $stmtBA = $con->prepare('DELETE FROM BookAuthors WHERE author_id = ?');
+            $stmtBA->execute([$author_id]);
+
+            $con->commit();
+            return true;
+        }catch (PDOException $e) {
+            if ($con->inTransaction()) {
+                $con->rollBack();
+            }
+            throw $e;
+        }
+    }
+
+    function deleteGenre($genre_id){
+        $con = $this->opencon();
+        try {
+            $con->beginTransaction();
+
+            $stmtGenre = $con->prepare('DELETE FROM genres WHERE genre_id = ?');
+            $stmtGenre->execute([$genre_id]);
+
+            $stmtBG = $con->prepare('DELETE FROM BookGenre WHERE genre_id = ?');
+            $stmtBG->execute([$genre_id]);
+
+            $con->commit();
+            return true;
+        }catch (PDOException $e) {
+            if ($con->inTransaction()) {
+                $con->rollBack();
+            }
+            throw $e;
+        }
     }
 }
